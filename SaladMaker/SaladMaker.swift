@@ -15,73 +15,25 @@ class SaladMaker {
 
     func make(onIngrdientPrepped: @escaping (Ingredient) -> (), onCompletion completionHandler: @escaping () -> ()) {
         let saladBowl = SaladBowl()
-        LettucePrepper().prep(saladBowl, onCompletion: { saladBowl in
-            onIngrdientPrepped(.lettuce)
-            TomatoesPrepper().prep(saladBowl, onCompletion: { saladBowl in
-                onIngrdientPrepped(.tomatoes)
-                RedOnionPrepper().prep(saladBowl, onCompletion: { saladBowl in
-                    onIngrdientPrepped(.redOnion)
-                    SweetcornPrepper().prep(saladBowl, onCompletion: { saladBowl in
-                        onIngrdientPrepped(.sweetcorn)
-                        TunaPrepper().prep(saladBowl, onCompletion: { saladBowl in
-                            onIngrdientPrepped(.tuna)
-                            completionHandler()
-                        })
-                    })
-                })
-            })
-        })
-    }
-}
-
-class LettucePrepper {
-
-    func prep(_ saladBowl: SaladBowl, onCompletion completionHandler: @escaping (SaladBowl) -> ()) {
-        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 1.0) {
-            saladBowl.ingredients.append(.lettuce)
-            completionHandler(saladBowl)
+        let ingredients: [Ingredient] = [.lettuce, .tomatoes, .redOnion, .sweetcorn, .tuna] //1 List ingredients in order
+        var operations: [Operation] = []
+        for (index, ingredient) in ingredients.enumerated() {
+            let operation = IngredientPrepper(saladBowl: saladBowl, ingredient: ingredient) // 2 create operation for each ingredient
+            operation.completionBlock = {
+                onIngrdientPrepped(ingredient)
+            }
+            if index > 0 { // 3 add previous ingredient operation as dependency (except for the first one (lettuce)
+                let previousOperation = operations[index - 1]
+                operation.addDependency(previousOperation)
+            }
+            operations.append(operation)
         }
-    }
-}
-
-class TomatoesPrepper {
-    
-    let dispatchQueue = DispatchQueue(label: "com.saladmaker.app.tomatoes_prepper")
-    
-    func prep(_ saladBowl: SaladBowl, onCompletion completionHandler: @escaping (SaladBowl) -> ()) {
-        self.dispatchQueue.asyncAfter(deadline: .now() + 1.0) {
-            saladBowl.ingredients.append(.tomatoes)
-            completionHandler(saladBowl)
-        }
-    }
-}
-
-class RedOnionPrepper {
-
-    func prep(_ saladBowl: SaladBowl, onCompletion completionHandler: @escaping (SaladBowl) -> ()) {
-        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 1.0) {
-            saladBowl.ingredients.append(.redOnion)
-            completionHandler(saladBowl)
-        }
-    }
-}
-
-class SweetcornPrepper {
-    
-    func prep(_ saladBowl: SaladBowl, onCompletion completionHandler: @escaping (SaladBowl) -> ()) {
-        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 1.0) {
-            saladBowl.ingredients.append(.sweetcorn)
-            completionHandler(saladBowl)
-        }
-    }
-}
-
-class TunaPrepper {
-
-    func prep(_ saladBowl: SaladBowl, onCompletion completionHandler: @escaping (SaladBowl) -> ()) {
-        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 1.0) {
-            saladBowl.ingredients.append(.tuna)
-            completionHandler(saladBowl)
+        let operationQueue = OperationQueue() // 4 create operation queue
+        operationQueue.maxConcurrentOperationCount = 1 // 7
+        operationQueue.addOperations(operations, waitUntilFinished: false) // 5
+        operationQueue.addBarrierBlock {
+            // 6 handling completion of all operations
+            completionHandler()
         }
     }
 }
