@@ -85,3 +85,19 @@ class TunaPrepper {
         }
     }
 }
+
+class IngredientPrepper: Operation {
+    
+    private let saladBowl: SaladBowl
+    private let ingredient: Ingredient
+    
+    init(saladBowl: SaladBowl, ingredient: Ingredient) {
+        self.saladBowl = saladBowl
+        self.ingredient = ingredient
+    }
+    
+    override func main() {
+        sleep(1)
+        self.saladBowl.ingredients.append(self.ingredient)
+    }
+}
